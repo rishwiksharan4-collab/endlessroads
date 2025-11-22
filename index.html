@@ -3,70 +3,47 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover" />
-  <title>Endless Roads</title>
+  <title>Endless Roads — Ultra</title>
   <link rel="stylesheet" href="style.css" />
   <!-- Three.js -->
   <script src="https://unpkg.com/three@0.152.2/build/three.min.js"></script>
+  <!-- Optional: Simple postprocessing library from CDN (keeps code self-contained) -->
+  <script src="https://unpkg.com/three@0.152.2/examples/jsm/controls/OrbitControls.js" type="module"></script>
 </head>
 <body>
   <div id="ui">
     <header>
-      <img id="logo" alt="Endless Roads logo" src="icon.png">
+      <img id="logo" src="icon.png" alt="Endless Roads logo">
       <h1>Endless Roads</h1>
     </header>
 
     <div id="menu" class="panel">
-      <h2>Endless Roads</h2>
-      <p class="lead">Relaxing cartoon driving. Tap to steer or tilt your phone.</p>
-      <div class="buttons">
-        <button id="startBtn" class="primary">Start Game</button>
-        <button id="settingsBtn">Settings</button>
-        <button id="aboutBtn">About</button>
-      </div>
-      <p class="small">Built by Rishi Studios — original artwork & code.</p>
-    </div>
-
-    <div id="settings" class="panel hidden">
-      <h3>Settings</h3>
-      <label>Graphics:
-        <select id="gfxSelect">
+      <h2>Endless Roads — Ultra</h2>
+      <p class="lead">High-fidelity mobile WebGL driving. Use buttons or tilt to steer.</p>
+      <div class="row">
+        <button id="startBtn" class="primary">Start</button>
+        <select id="qualitySelect" aria-label="Quality">
           <option value="low">Low</option>
           <option value="medium" selected>Medium</option>
           <option value="high">High</option>
         </select>
-      </label>
-      <label>Sound:
-        <select id="soundSelect">
-          <option value="off">Off</option>
-          <option value="on" selected>On</option>
-        </select>
-      </label>
-      <div class="buttons">
-        <button id="backFromSettings">Back</button>
       </div>
-    </div>
-
-    <div id="about" class="panel hidden">
-      <h3>About</h3>
-      <p>Endless Roads — an original cartoon-style mobile driving experience created for educational use by Rishi Studios.</p>
-      <div class="buttons">
-        <button id="backFromAbout">Back</button>
-      </div>
+      <p class="small">Built by Rishi Studios — original assets.</p>
     </div>
 
     <div id="hud" class="hidden">
       <div id="score">Score: 0</div>
-      <div id="pauseBtn" role="button" aria-label="Pause">⏸</div>
+      <div id="speed">SPD</div>
+      <div id="pauseBtn" role="button">⏸</div>
     </div>
 
     <footer id="footer">
-      <a href="privacy.html" target="_blank">Privacy Policy</a> · <span id="version">v1.1</span>
+      <a href="privacy.html" target="_blank">Privacy Policy</a> · v1.1
     </footer>
   </div>
 
-  <canvas id="gameCanvas" aria-hidden="false"></canvas>
+  <canvas id="gameCanvas"></canvas>
 
-  <script src="main.js"></script>
+  <script type="module" src="main.js"></script>
 </body>
 </html>
-<script src="https://unpkg.com/three@0.152.2/build/three.min.js"></script>
