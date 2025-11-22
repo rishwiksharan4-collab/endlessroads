@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover" />
   <title>Endless Roads</title>
   <link rel="stylesheet" href="style.css" />
+  <!-- Three.js -->
   <script src="https://unpkg.com/three@0.152.2/build/three.min.js"></script>
 </head>
 <body>
@@ -16,13 +17,13 @@
 
     <div id="menu" class="panel">
       <h2>Endless Roads</h2>
-      <p class="lead">Relaxing endless driving. Tap to steer, tilt to lean.</p>
+      <p class="lead">Relaxing cartoon driving. Tap to steer or tilt your phone.</p>
       <div class="buttons">
         <button id="startBtn" class="primary">Start Game</button>
         <button id="settingsBtn">Settings</button>
         <button id="aboutBtn">About</button>
       </div>
-      <p class="small">Built by Rishi Studios — free & offline.</p>
+      <p class="small">Built by Rishi Studios — original artwork & code.</p>
     </div>
 
     <div id="settings" class="panel hidden">
@@ -47,8 +48,7 @@
 
     <div id="about" class="panel hidden">
       <h3>About</h3>
-      <p>Endless Roads — a small, original mobile driving experience created for educational use by Rishi Studios.</p>
-      <p class="small">This project contains only original artwork and code.</p>
+      <p>Endless Roads — an original cartoon-style mobile driving experience created for educational use by Rishi Studios.</p>
       <div class="buttons">
         <button id="backFromAbout">Back</button>
       </div>
@@ -56,7 +56,7 @@
 
     <div id="hud" class="hidden">
       <div id="score">Score: 0</div>
-      <div id="pauseBtn">⏸</div>
+      <div id="pauseBtn" role="button" aria-label="Pause">⏸</div>
     </div>
 
     <footer id="footer">
@@ -64,7 +64,7 @@
     </footer>
   </div>
 
-  <canvas id="gameCanvas"></canvas>
+  <canvas id="gameCanvas" aria-hidden="false"></canvas>
 
   <script src="main.js"></script>
 </body>
