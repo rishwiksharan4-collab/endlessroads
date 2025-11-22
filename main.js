@@ -1,168 +1,261 @@
-// Endless Roads - cartoon edition (main.js)
-(() => {
-  // UI refs
-  const startBtn = document.getElementById('startBtn');
-  const settingsBtn = document.getElementById('settingsBtn');
-  const aboutBtn = document.getElementById('aboutBtn');
-  const menu = document.getElementById('menu');
-  const settings = document.getElementById('settings');
-  const about = document.getElementById('about');
-  const backFromSettings = document.getElementById('backFromSettings');
-  const backFromAbout = document.getElementById('backFromAbout');
-  const hud = document.getElementById('hud');
-  const scoreEl = document.getElementById('score');
-  const pauseBtn = document.getElementById('pauseBtn');
-  const canvas = document.getElementById('gameCanvas');
+// main.js (module) - Ultra realism scaffold (Three.js)
+// NOTE: This is a high-quality procedural road + environment system.
+// It's self-contained and avoids external models. It aims for "slow-roads-like" visuals,
+// but remains original and optimized for mobile where possible.
 
-  // UI navigation
-  settingsBtn.addEventListener('click', ()=>{ menu.classList.add('hidden'); settings.classList.remove('hidden'); });
-  aboutBtn.addEventListener('click', ()=>{ menu.classList.add('hidden'); about.classList.remove('hidden'); });
-  backFromSettings.addEventListener('click', ()=>{ settings.classList.add('hidden'); menu.classList.remove('hidden'); });
-  backFromAbout.addEventListener('click', ()=>{ about.classList.add('hidden'); menu.classList.remove('hidden'); });
+import * as THREE from 'https://unpkg.com/three@0.152.2/build/three.module.js';
 
-  // renderer & scene
-  const renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:true});
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setClearColor(0x87ceeb, 0); // transparent so CSS gradient shows
+// small helper: detect mobile / low-power
+const isMobile = /Mobi|Android/i.test(navigator.userAgent);
 
-  const scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2(0x87ceeb, 0.0007);
+// basic DOM refs
+const canvas = document.getElementById('gameCanvas');
+const startBtn = document.getElementById('startBtn');
+const qualitySelect = document.getElementById('qualitySelect');
+const hud = document.getElementById('hud');
+const scoreEl = document.getElementById('score');
+const speedEl = document.getElementById('speed');
+const pauseBtn = document.getElementById('pauseBtn');
 
-  const camera = new THREE.PerspectiveCamera(62, window.innerWidth/window.innerHeight, 0.1, 2000);
-  camera.position.set(0, 6, 14);
+// Renderer + scene + camera
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-  // lights (soft, cartoony)
-  const hemi = new THREE.HemisphereLight(0xffffff, 0xbbd6ff, 0.9); hemi.position.set(0,50,0); scene.add(hemi);
-  const dir = new THREE.DirectionalLight(0xffffff, 0.6); dir.position.set(5,10,2); scene.add(dir);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x87c1ff); // sky base color
+scene.fog = new THREE.FogExp2(0x87c1ff, 0.00055);
 
-  // road params
-  const laneWidth = 2.6;
-  const roadWidth = laneWidth * 3;
-  const segLen = 14;
-  const visibleSegments = 16;
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 3000);
+camera.position.set(0, 5.6, 13);
 
-  // simple materials with cartoon-ish look (no textures)
-  const roadMat = new THREE.MeshStandardMaterial({color:0x35424a, metalness:0.1, roughness:0.8});
-  const lineMat = new THREE.MeshBasicMaterial({color:0xfff0a8});
-  const grassMat = new THREE.MeshStandardMaterial({color:0x9bcc7a, metalness:0.05, roughness:0.9});
+// Lights (physically-inspired)
+const hemi = new THREE.HemisphereLight(0xffffff, 0x8fb6ff, 0.9);
+hemi.position.set(0, 50, 0);
+scene.add(hemi);
 
-  // container
-  const roadGroup = new THREE.Group(); scene.add(roadGroup);
+const sun = new THREE.DirectionalLight(0xfff7e6, 1.0);
+sun.position.set(-40, 80, 30);
+sun.castShadow = true;
+sun.shadow.camera.left = -120; sun.shadow.camera.right = 120; sun.shadow.camera.top = 120; sun.shadow.camera.bottom = -120;
+sun.shadow.camera.near = 0.5; sun.shadow.camera.far = 300;
+sun.shadow.mapSize.set(2048, 2048);
+scene.add(sun);
 
-  function makeRoadSegment(z) {
-    const g = new THREE.Group();
-    const plane = new THREE.Mesh(new THREE.BoxGeometry(roadWidth, 0.2, segLen), roadMat);
-    plane.position.set(0, 0, z); g.add(plane);
+// ground/hills (procedural, low-poly)
+const hills = new THREE.Group();
+scene.add(hills);
 
-    // dashed center line (cartoon dashes)
-    const dashCount = 5;
-    for (let i=0;i<dashCount;i++){
-      const dw = 0.3, dh = 0.06;
-      const dz = z - segLen/2 + (i+0.5)*(segLen/dashCount);
-      const dash = new THREE.Mesh(new THREE.BoxGeometry(dw, dh, segLen/dashCount*0.6), lineMat);
-      dash.position.set(0, 0.12, dz);
-      g.add(dash);
+function makeHills(detail = 18, spread = 160) {
+  // remove old
+  while (hills.children.length) hills.remove(hills.children[0]);
+
+  const g = new THREE.PlaneGeometry(spread*2, spread*2, detail, detail);
+  g.rotateX(-Math.PI/2);
+  // displace vertices to create rolling hills using Perlin-like noise
+  for (let i=0;i<g.attributes.position.count;i++){
+    const x = g.attributes.position.getX(i);
+    const z = g.attributes.position.getZ(i);
+    // layered simple pseudo-noise
+    const h = (Math.sin(x*0.03) + Math.cos(z*0.02*0.9) + Math.sin((x+z)*0.015))*1.6;
+    g.attributes.position.setY(i, h - 6); // sink below camera
+  }
+  g.computeVertexNormals();
+  const mat = new THREE.MeshStandardMaterial({color:0x9bcc7a, roughness:1.0, metalness:0.0});
+  const m = new THREE.Mesh(g, mat);
+  m.receiveShadow = true;
+  m.position.y = -1.5;
+  hills.add(m);
+}
+
+makeHills(36, 180);
+
+// Procedural road generator (curved segments)
+const road = new THREE.Group();
+scene.add(road);
+
+function makeRoadSegments(segmentCount = 160, segLen = 10, laneW = 3.0) {
+  while (road.children.length) road.remove(road.children[0]);
+
+  // base geometry for a straight segment
+  for (let i=0;i<segmentCount;i++){
+    const z = -i*segLen;
+    // width taper small random
+    const seg = new THREE.Group();
+    const roadGeom = new THREE.BoxGeometry(laneW*3.2, 0.15, segLen+0.4);
+    const roadMat = new THREE.MeshStandardMaterial({color:0x2e343a, roughness:0.95});
+    const mesh = new THREE.Mesh(roadGeom, roadMat);
+    mesh.position.set(0, 0, z);
+    mesh.receiveShadow = true;
+    seg.add(mesh);
+
+    // center dashed line
+    const dashCount = 4;
+    for (let d=0; d<dashCount; d++){
+      const w = 0.22, h = 0.02;
+      const dz = z - segLen/2 + (d+0.5)*(segLen/dashCount);
+      const dashGeo = new THREE.BoxGeometry(w, h, segLen/dashCount*0.6);
+      const dash = new THREE.Mesh(dashGeo, new THREE.MeshBasicMaterial({color:0xfff1b0}));
+      dash.position.set(0, 0.08, dz);
+      seg.add(dash);
     }
 
-    // grassy sides (wider planes slightly lower)
-    const left = new THREE.Mesh(new THREE.BoxGeometry(roadWidth*2.2, 0.2, segLen), grassMat);
-    left.position.set(-roadWidth*1.2, -0.06, z); g.add(left);
-    const right = left.clone(); right.position.set(roadWidth*1.2, -0.06, z); g.add(right);
+    // small side detail
+    const sideGeom = new THREE.BoxGeometry(laneW*2.4, 0.12, segLen+0.4);
+    const left = new THREE.Mesh(sideGeom, new THREE.MeshStandardMaterial({color:0x83b46f}));
+    left.position.set(-laneW*1.6, -0.06, z); seg.add(left);
+    const right = left.clone(); right.position.set(laneW*1.6, -0.06, z); seg.add(right);
 
-    return g;
+    road.add(seg);
   }
+}
 
-  const segments = [];
-  for (let i=0;i<visibleSegments;i++){
-    const seg = makeRoadSegment(-i*segLen);
-    roadGroup.add(seg);
-    segments.push(seg);
-  }
+// create road
+makeRoadSegments();
 
-  // CARTOON CAR (original, simple shapes)
-  const car = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.BoxGeometry(1.6,0.6,2.4), new THREE.MeshStandardMaterial({color:0xff6b6b, metalness:0.1, roughness:0.6}));
-  body.position.set(0,0.9,6); body.castShadow = true; car.add(body);
-  // windshield
-  const wind = new THREE.Mesh(new THREE.BoxGeometry(1.2,0.3,0.9), new THREE.MeshStandardMaterial({color:0x4ad3ff, metalness:0.2, roughness:0.3}));
-  wind.position.set(0,1.05,5.35); car.add(wind);
-  // wheels (simple rounded boxes)
-  const wheelGeo = new THREE.CylinderGeometry(0.28,0.28,0.5,16);
-  const wheelMat = new THREE.MeshStandardMaterial({color:0x222});
-  for (let x of [-0.7,0.7]) for (let z of [5.6,6.3]){
+// player car (primitive but polished)
+const car = new THREE.Group();
+function makeCar() {
+  while (car.children.length) car.remove(car.children[0]);
+  const body = new THREE.Mesh(new THREE.BoxGeometry(1.6,0.6,2.4), new THREE.MeshStandardMaterial({color:0xff6b6b, roughness:0.5, metalness:0.1}));
+  body.position.set(0, 0.9, 6);
+  car.add(body);
+  const wind = new THREE.Mesh(new THREE.BoxGeometry(1.2,0.28,0.92), new THREE.MeshStandardMaterial({color:0x7fe7ff, metalness:0.1, roughness:0.3}));
+  wind.position.set(0,1.03,5.35); car.add(wind);
+  // wheels
+  const wheelGeo = new THREE.CylinderGeometry(0.28, 0.28, 0.5, 12);
+  const wheelMat = new THREE.MeshStandardMaterial({color:0x333});
+  for (let x of [-0.7, 0.7]) for (let z of [5.6, 6.3]) {
     const w = new THREE.Mesh(wheelGeo, wheelMat);
-    w.rotation.z = Math.PI/2;
-    w.position.set(x,0.35,z);
-    car.add(w);
+    w.rotation.z = Math.PI/2; w.position.set(x,0.34,z); car.add(w);
   }
   scene.add(car);
+}
+makeCar();
 
-  // Some cartoon clouds (simple planes)
-  const cloudGeo = new THREE.PlaneGeometry(6,2.8);
-  const cloudMat = new THREE.MeshBasicMaterial({color:0xffffff, opacity:0.95, transparent:true});
-  for(let i=0;i<8;i++){
-    const c = new THREE.Mesh(cloudGeo, cloudMat);
-    c.position.set((Math.random()-0.5)*80, 7+Math.random()*6, -Math.random()*200);
-    c.rotation.y = Math.random()*0.6-0.3;
-    scene.add(c);
+// performance / quality settings
+let quality = 'medium';
+function applyQuality(q) {
+  quality = q;
+  if (q === 'high') {
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    sun.shadow.mapSize.set(2048,2048);
+    makeHills(48, 240);
+    makeRoadSegments(220, 10);
+  } else if (q === 'medium') {
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    sun.shadow.mapSize.set(1024,1024);
+    makeHills(36, 180);
+    makeRoadSegments(160, 10);
+  } else {
+    renderer.setPixelRatio(1);
+    sun.shadow.mapSize.set(512,512);
+    makeHills(24, 120);
+    makeRoadSegments(100, 12);
   }
+  sun.shadow.needsUpdate = true;
+}
+applyQuality('medium');
 
-  // controls & state
-  let lane = 0; let targetX = 0;
-  const lanePositions = [-laneWidth, 0, laneWidth];
-  function moveLeft(){ lane = Math.max(-1, lane-1); targetX = lanePositions[lane+1]; }
-  function moveRight(){ lane = Math.min(1, lane+1); targetX = lanePositions[lane+1]; }
+qualitySelect.addEventListener('change', (e)=> applyQuality(e.target.value));
 
-  window.addEventListener('keydown', (e)=>{ if(e.key==='ArrowLeft'||e.key==='a') moveLeft(); if(e.key==='ArrowRight'||e.key==='d') moveRight(); });
+// camera follow & controls
+let targetLane = 0, lane = 0;
+const lanePositions = [-3.0, 0, 3.0];
+function moveLeft(){ targetLane = Math.max(-1, targetLane-1); }
+function moveRight(){ targetLane = Math.min(1, targetLane+1); }
+window.addEventListener('keydown', (ev)=> { if (ev.key==='ArrowLeft'||ev.key==='a') moveLeft(); if (ev.key==='ArrowRight'||ev.key==='d') moveRight(); });
+window.addEventListener('touchstart', (e)=> { if (!e.touches) return; const x = e.touches[0].clientX; if (x < window.innerWidth/2) moveLeft(); else moveRight(); });
 
-  // simple touch: left/right half tap
-  window.addEventListener('touchstart', (e)=>{ if(!e.touches || !e.touches[0]) return; const x = e.touches[0].clientX; if(x < window.innerWidth/2) moveLeft(); else moveRight(); });
-
-  // tilt cosmetic
-  if(window.DeviceOrientationEvent) window.addEventListener('deviceorientation', (ev)=>{ if(ev.gamma!==null){ const tilt = Math.max(-25, Math.min(25, ev.gamma)); car.rotation.z = THREE.MathUtils.degToRad(-tilt/40); } });
-
-  // game mechanics
-  let speed = 0.35; let distance = 0; let score = 0; let running = false; let paused = false;
-
-  const clock = new THREE.Clock();
-  function animate(){
-    requestAnimationFrame(animate);
-    const dt = Math.min(0.05, clock.getDelta());
-    if(running && !paused){
-      speed = Math.min(1.6, speed + dt*0.02);
-      const moveZ = speed * 60 * dt * 0.04;
-      for (let seg of segments){
-        seg.position.z += moveZ;
-        if(seg.position.z > segLen*1.5){
-          const minZ = Math.min(...segments.map(s=>s.position.z));
-          seg.position.z = minZ - segLen;
-        }
-      }
-      distance += moveZ;
-      const newScore = Math.floor(distance * 2);
-      if(newScore !== score){ score = newScore; scoreEl && (scoreEl.innerText = `Score: ${score}`); }
+// tilt (cosmetic)
+if (window.DeviceOrientationEvent) {
+  window.addEventListener('deviceorientation', (ev) => {
+    if (ev.gamma !== null) {
+      const tilt = Math.max(-25, Math.min(25, ev.gamma));
+      car.rotation.z = THREE.MathUtils.degToRad(-tilt/35);
     }
-    // smooth car lateral movement
-    car.position.x += (targetX - car.position.x) * 0.18;
-    camera.position.x += (car.position.x - camera.position.x)*0.05;
-    camera.lookAt(car.position.x, 1.8, car.position.z - 6);
-    renderer.render(scene, camera);
+  });
+}
+
+// game simulation state
+let running = false;
+let paused = false;
+let speed = 0.9; // base forward camera speed (tweak)
+let distance = 0;
+let segmentsMoved = 0;
+
+// recycle logic: move each segment forward and when too close re-position to far end with curvature
+function updateRoad(dt) {
+  const move = speed * dt * 28; // scale
+  distance += move;
+  // shift segments forward
+  road.children.forEach(seg => {
+    seg.position.z += move;
+  });
+
+  // recycle
+  let farZ = Math.min(...road.children.map(s => s.position.z));
+  for (let seg of road.children) {
+    if (seg.position.z > 15) {
+      // move to far end
+      seg.position.z = farZ - 10;
+      // add slight curve/random bank for variety
+      const bank = (Math.random()-0.5)*0.12;
+      seg.rotation.z = bank;
+      farZ = Math.min(...road.children.map(s => s.position.z));
+      segmentsMoved++;
+    }
   }
-  animate();
+}
 
-  // UI interactions
-  startBtn.addEventListener('click', ()=>{
-    menu.classList.add('hidden');
-    hud.classList.remove('hidden');
-    running = true; paused = false;
-  });
-  pauseBtn.addEventListener('click', ()=>{
-    paused = !paused;
-    pauseBtn.innerText = paused ? '▶' : '⏸';
-  });
+// main loop
+const clock = new THREE.Clock();
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = Math.min(0.05, clock.getDelta());
 
-  // resize handling
-  window.addEventListener('resize', ()=>{ renderer.setSize(window.innerWidth, window.innerHeight); camera.aspect = window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); });
+  if (running && !paused) {
+    // accelerate slightly over time
+    speed = Math.min(1.8, speed + dt * 0.02);
+    updateRoad(dt);
+  }
 
-})();
+  // smooth lane movement
+  lane += (targetLane - lane) * 0.12;
+  car.position.x += (lanePositions[lane+1] - car.position.x) * 0.16;
+
+  // camera follow (subtle)
+  camera.position.x += (car.position.x - camera.position.x) * 0.08;
+  camera.lookAt(car.position.x, 1.8, car.position.z - 6);
+
+  // HUD
+  scoreEl.innerText = `Score: ${Math.floor(distance*2)}`;
+  speedEl.innerText = `SPD: ${Math.round(speed*100)}`;
+
+  renderer.render(scene, camera);
+}
+animate();
+
+// start/pause handlers
+startBtn.addEventListener('click', () => {
+  running = true;
+  hud.classList.remove('hidden');
+  document.getElementById('menu').classList.add('hidden');
+});
+// pause
+pauseBtn.addEventListener('click', () => {
+  paused = !paused;
+  pauseBtn.innerText = paused ? '▶' : '⏸';
+});
+
+// resize handler
+window.addEventListener('resize', () => {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+});
+
+// expose a simple API for debugging
+window.__ER = { scene, renderer, camera, applyQuality };
