@@ -3,23 +3,21 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover" />
-  <title>Endless Roads — Ultra</title>
+  <title>Endless Roads — Real 3D</title>
   <link rel="stylesheet" href="style.css" />
-  <!-- Three.js -->
-  <script src="https://unpkg.com/three@0.152.2/build/three.min.js"></script>
-  <!-- Optional: Simple postprocessing library from CDN (keeps code self-contained) -->
-  <script src="https://unpkg.com/three@0.152.2/examples/jsm/controls/OrbitControls.js" type="module"></script>
+  <!-- Three.js module build -->
+  <script type="module" src="main.js"></script>
 </head>
 <body>
   <div id="ui">
     <header>
-      <img id="logo" src="icon.png" alt="Endless Roads logo">
+      <img id="logo" src="icon.png" alt="Endless Roads">
       <h1>Endless Roads</h1>
     </header>
 
     <div id="menu" class="panel">
-      <h2>Endless Roads — Ultra</h2>
-      <p class="lead">High-fidelity mobile WebGL driving. Use buttons or tilt to steer.</p>
+      <h2>Endless Roads — Real 3D</h2>
+      <p class="lead">Medium-Realism 3D driving — use tilt or taps to steer. Optimised for mobile.</p>
       <div class="row">
         <button id="startBtn" class="primary">Start</button>
         <select id="qualitySelect" aria-label="Quality">
@@ -42,8 +40,6 @@
     </footer>
   </div>
 
-  <canvas id="gameCanvas"></canvas>
-
-  <script type="module" src="main.js"></script>
+  <canvas id="gameCanvas" aria-hidden="false"></canvas>
 </body>
 </html>
