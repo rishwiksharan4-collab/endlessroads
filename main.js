@@ -1,5 +1,6 @@
 // main.js (module) — Real 3D medium-quality scaffold
-import * as THREE from 'https://unpkg.com/three@0.152.2/build/three.module.js';
+// FIX: Using the more reliable Cloudflare CDN link for the Three.js module.
+import * as THREE from 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r152/three.module.min.js';
 
 // DOM
 const canvas = document.getElementById('gameCanvas');
@@ -181,7 +182,7 @@ const lanePositions = [-3.2, 0, 3.2];
 function moveLeft(){ targetLane = Math.max(-1, targetLane - 1); }
 function moveRight(){ targetLane = Math.min(1, targetLane + 1); }
 
-// Event listeners setup (placed here to ensure they are defined before use)
+// Event listeners setup 
 window.addEventListener('keydown', e => { if (e.key === 'ArrowLeft' || e.key === 'a') moveLeft(); if (e.key === 'ArrowRight' || e.key === 'd') moveRight(); });
 window.addEventListener('touchstart', e => { if (!e.touches) return; const x = e.touches[0].clientX; if (x < window.innerWidth / 2) moveLeft(); else moveRight(); });
 if (window.DeviceOrientationEvent) window.addEventListener('deviceorientation', ev => { if (ev.gamma !== null) car.rotation.z = THREE.MathUtils.degToRad(-Math.max(-25, Math.min(25, ev.gamma)) / 35); });
@@ -234,15 +235,14 @@ qualitySelect.addEventListener('change', e => applyQuality(e.target.value));
 
 // camera behavior & main loop
 const clock = new THREE.Clock();
+let animationFrameId = null; // To store the ID of the running loop
 
-// NEW: Separated render from update
+// Separated render from update
 function render() {
   renderer.render(scene, camera);
 }
 
-// NEW: Main animation loop that runs the simulation logic
-let animationFrameId = null; // To store the ID of the running loop
-
+// Main animation loop that runs the simulation logic
 function runGame(time) {
   animationFrameId = requestAnimationFrame(runGame); // Continue the loop
   const dt = Math.min(0.05, clock.getDelta());
@@ -288,6 +288,7 @@ startBtn.addEventListener('click', () => {
 
   // 3. Start the main game loop only once
   if (animationFrameId === null) {
+      clock.start(); // Start the clock for fresh time delta calculation
       runGame();
   }
 
