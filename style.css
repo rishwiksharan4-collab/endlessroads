@@ -24,3 +24,6 @@ button.primary{background:var(--accent);color:#112}
   .panel{width:92%}
   #logo{width:44px;height:44px}
 }
+#menu {
+  display: none !important; /* Hides the menu completely */
+}
