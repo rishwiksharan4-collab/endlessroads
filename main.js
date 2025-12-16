@@ -28,7 +28,8 @@ scene.fog = new THREE.FogExp2(0x9fd6ff, 0.0006);
 
 // Camera
 const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 4000);
-camera.position.set(0, 5.2, 12);
+// CAMERA FIX: Set camera position behind (Z=5) and higher (Y=6.5) than the car's start (Z=6)
+camera.position.set(0, 6.5, 5); 
 
 // Lights
 const hemi = new THREE.HemisphereLight(0xffffff, 0xcfe6ff, 0.9); scene.add(hemi);
@@ -260,7 +261,9 @@ function runGame(time) {
   camera.position.x += (car.position.x - camera.position.x) * 0.06;
   const camZ = 12 + Math.max(0, (2.0 - speed) * 2.5);
   camera.position.z += (car.position.z - camZ - camera.position.z) * 0.06;
-  camera.lookAt(car.position.x, 1.6, car.position.z - 6);
+  
+  // CAMERA FIX: Target a point 1 unit in front of the car, Y=1.6 (a comfortable look point)
+  camera.lookAt(car.position.x, 1.6, car.position.z + 1); 
 
   // HUD update
   scoreEl.innerText = `Score: ${Math.floor(distance * 2)}`;
