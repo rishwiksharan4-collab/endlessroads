@@ -65,19 +65,18 @@ buildHills(36, 220);
 // ROAD: extruded shape along CatmullRom curve to allow smooth banking & curvature
 const roadGroup = new THREE.Group(); scene.add(roadGroup);
 
-// create an initial path with gentle curves
-function createPath(points = 200, length = 2000) {
+// create an initial path with gentle curves (Helper function moved to the top for clarity)
+function createPath(points = 280, length = 2800) {
   const pts = [];
-  let z = 0;
   for (let i = 0; i < points; i++) {
     const t = i / points;
-    const x = Math.sin(t * Math.PI * 2.0 * 0.18) * 8.0 * Math.sin(t * Math.PI);
-    const y = 0;
-    z = -i * (length / points);
-    pts.push(new THREE.Vector3(x, y, z));
+    const x = Math.sin(t * Math.PI * 2.0 * 0.14) * 8.4 * Math.sin(t * Math.PI) * (1.0 + (Math.sin(t * 8) * 0.08));
+    const z = -i * (length / points);
+    pts.push(new THREE.Vector3(x, 0, z));
   }
   return new THREE.CatmullRomCurve3(pts);
 }
+
 
 let pathCurve = createPath(280, 2800);
 
@@ -181,11 +180,12 @@ let targetLane = 0, lane = 0;
 const lanePositions = [-3.2, 0, 3.2];
 function moveLeft(){ targetLane = Math.max(-1, targetLane - 1); }
 function moveRight(){ targetLane = Math.min(1, targetLane + 1); }
+
+// Event listeners setup (placed here to ensure they are defined before use)
 window.addEventListener('keydown', e => { if (e.key === 'ArrowLeft' || e.key === 'a') moveLeft(); if (e.key === 'ArrowRight' || e.key === 'd') moveRight(); });
 window.addEventListener('touchstart', e => { if (!e.touches) return; const x = e.touches[0].clientX; if (x < window.innerWidth / 2) moveLeft(); else moveRight(); });
-
-// tilt cosmetic
 if (window.DeviceOrientationEvent) window.addEventListener('deviceorientation', ev => { if (ev.gamma !== null) car.rotation.z = THREE.MathUtils.degToRad(-Math.max(-25, Math.min(25, ev.gamma)) / 35); });
+
 
 // simulation variables
 let speed = 0.95; let distance = 0;
@@ -193,11 +193,10 @@ let speed = 0.95; let distance = 0;
 // road update (recycle technique)
 function updateRoad(dt) {
   const move = speed * dt * 40;
-  // move road group children forward (we built road as static geometry approximating long track; to simulate forward: shift camera and recycle)
-  // We'll shift the roadGroup position z for simple reuse effect
+  // move road group children forward
   roadGroup.position.z += move;
   if (roadGroup.position.z > 20) {
-    // reset and slightly modify curve for variety: rotate or re-create small randomness
+    // recycle logic
     pathCurve = createPath(280, 2800); // re-create curve with new randomness
     makeRoad(pathCurve, 3.2, 360);
     roadGroup.position.z = 0;
@@ -225,16 +224,30 @@ function applyQuality(q) {
     buildHills(20, 160);
     makeRoad(pathCurve, 3.0, 220);
   }
+  // Ensure we use the latest path
+  pathCurve = createPath(280, 2800); 
+  makeRoad(pathCurve, 3.2, 360);
 }
-applyQuality('medium');
+// Initial quality application
+applyQuality(qualitySelect.value); 
 qualitySelect.addEventListener('change', e => applyQuality(e.target.value));
 
 // camera behavior & main loop
 const clock = new THREE.Clock();
-function animate() {
-  requestAnimationFrame(animate);
+
+// NEW: Separated render from update
+function render() {
+  renderer.render(scene, camera);
+}
+
+// NEW: Main animation loop that runs the simulation logic
+let animationFrameId = null; // To store the ID of the running loop
+
+function runGame(time) {
+  animationFrameId = requestAnimationFrame(runGame); // Continue the loop
   const dt = Math.min(0.05, clock.getDelta());
-  if (running && !paused) {
+  
+  if (running && !paused) { 
     // increase speed slightly
     speed = Math.min(2.0, speed + dt * 0.02);
     updateRoad(dt);
@@ -252,17 +265,37 @@ function animate() {
   // HUD update
   scoreEl.innerText = `Score: ${Math.floor(distance * 2)}`;
   speedEl.innerText = `SPD: ${Math.round(speed * 100)}`;
-
-  renderer.render(scene, camera);
+  
+  render(); // Call the render function
 }
-animate();
 
-// UI hooks
+// Run the render loop immediately to display the menu over the static 3D scene
+render(); 
+
+// UI hooks (CRUCIAL FIX HERE)
 startBtn.addEventListener('click', () => {
+  // 1. Reset Game State to a known, slow speed
   running = true;
+  paused = false;
+  speed = 0.95; 
+  distance = 0; 
+  roadGroup.position.z = 0; // Reset road position
+  targetLane = 0; lane = 0;
+  car.position.set(0, 0.88, 6); // Reset car position
+
+  // 2. Apply Quality (re-builds the road based on selection)
+  applyQuality(qualitySelect.value);
+
+  // 3. Start the main game loop only once
+  if (animationFrameId === null) {
+      runGame();
+  }
+
+  // 4. Update UI
   hud.classList.remove('hidden');
   document.getElementById('menu').classList.add('hidden');
 });
+
 pauseBtn && pauseBtn.addEventListener('click', () => {
   paused = !paused;
   pauseBtn.innerText = paused ? '▶' : '⏸';
@@ -274,17 +307,5 @@ window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
 });
 
-// helper to re-create path (same function as earlier usage)
-function createPath(points = 280, length = 2800) {
-  const pts = [];
-  for (let i = 0; i < points; i++) {
-    const t = i / points;
-    const x = Math.sin(t * Math.PI * 2.0 * 0.14) * 8.4 * Math.sin(t * Math.PI) * (1.0 + (Math.sin(t * 8) * 0.08));
-    const z = -i * (length / points);
-    pts.push(new THREE.Vector3(x, 0, z));
-  }
-  return new THREE.CatmullRomCurve3(pts);
-}
-
 // expose API for debugging
-window.__ER = { scene, renderer, camera, applyQuality };
+window.__ER = { scene, renderer, camera, applyQuality, runGame };
