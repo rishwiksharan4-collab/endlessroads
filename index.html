@@ -7,26 +7,15 @@
 </head>
 <body>
 
-<div id="menu">
+<div id="ui">
   <h1>Endless Roads</h1>
-  <button onclick="startGame()">Start</button>
-  <button onclick="togglePause()">Pause</button>
-  <button onclick="openSettings()">Settings</button>
+  <button id="startBtn">Start</button>
+  <button id="pauseBtn" disabled>Pause</button>
 </div>
 
-<div id="settings">
-  <h2>Settings</h2>
-  <label>
-    Steering Sensitivity
-    <input type="range" min="0.5" max="2" step="0.1" id="sens" value="1">
-  </label>
-  <button onclick="closeSettings()">Close</button>
-</div>
+<div id="speed">SPD 0</div>
 
-<div id="hud">SPD 0</div>
-
-<script src="https://cdn.jsdelivr.net/npm/three@0.155/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.152/build/three.min.js"></script>
 <script src="main.js"></script>
-
 </body>
 </html>
