@@ -1,38 +1,28 @@
-html, body {
+body {
   margin: 0;
-  padding: 0;
   overflow: hidden;
   font-family: Arial, sans-serif;
 }
 
-#menu, #settings {
+#ui {
   position: absolute;
   top: 20px;
   left: 20px;
-  background: rgba(255,255,255,0.9);
-  padding: 15px;
-  border-radius: 10px;
   z-index: 10;
-}
-
-#settings {
-  display: none;
 }
 
 button {
   display: block;
-  margin: 5px 0;
-  padding: 8px;
-  width: 100%;
+  margin: 8px 0;
+  padding: 10px 20px;
 }
 
-#hud {
+#speed {
   position: absolute;
   top: 20px;
   right: 20px;
-  background: rgba(0,0,0,0.6);
-  color: white;
+  background: #222;
+  color: #fff;
   padding: 8px 12px;
-  border-radius: 8px;
-  font-weight: bold;
+  border-radius: 6px;
 }
