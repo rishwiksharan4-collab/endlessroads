@@ -1,44 +1,39 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover" />
+  <meta charset="UTF-8" />
   <title>Endless Roads — Real 3D</title>
-  <link rel="stylesheet" href="style.css" />
-  <script type="module" src="main.js"></script>
-</head>
-<body>
-  <div id="ui">
-    <header>
-      <img id="logo" src="icon.png" alt="Endless Roads">
-      <h1>Endless Roads</h1>
-    </header>
 
-    <div id="menu" class="panel">
-      <h2>Endless Roads — Real 3D</h2>
-      <p class="lead">Medium-Realism 3D driving — use tilt or taps to steer. Optimised for mobile.</p>
-      <div class="row">
-        <button id="startBtn" class="primary">Start</button>
-        <select id="qualitySelect" aria-label="Quality">
-          <option value="low">Low</option>
-          <option value="medium" selected>Medium</option>
-          <option value="high">High</option>
-        </select>
-      </div>
-      <p class="small">Built by Rishi Studios — original assets.</p>
+  <!-- Mobile + scaling -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <!-- GAME CANVAS -->
+  <canvas id="game"></canvas>
+
+  <!-- UI -->
+  <div id="ui">
+    <div id="menu">
+      <h1>Endless Roads</h1>
+      <p>Medium-Realism 3D driving<br>Optimized for low-end devices</p>
+      <button id="startBtn">START DRIVE</button>
     </div>
 
     <div id="hud" class="hidden">
-      <div id="score">Score: 0</div>
-      <div id="speed">SPD</div>
-      <div id="pauseBtn" role="button">⏸</div>
+      <div id="speed">SPD 0</div>
     </div>
-
-    <footer id="footer">
-      <a href="privacy.html" target="_blank">Privacy Policy</a> · v1.1
-    </footer>
   </div>
 
-  <canvas id="gameCanvas" aria-hidden="false"></canvas>
+  <!-- 🚨 THIS ORDER IS CRITICAL 🚨 -->
+
+  <!-- THREE.JS (MUST LOAD FIRST) -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
+
+  <!-- YOUR GAME CODE -->
+  <script src="main.js"></script>
 </body>
 </html>
