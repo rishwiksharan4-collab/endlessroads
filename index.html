@@ -1,27 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Endless Roads — Real 3D</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8">
+  <title>Endless Roads</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <!-- START MENU -->
-  <div id="menu">
-    <h1>Endless Roads</h1>
-    <p>Free-Roam 3D Driving<br>Low-End Optimised</p>
-    <button id="startBtn">START DRIVE</button>
-    <small>WASD • Space = Brake • F = Auto</small>
-  </div>
+<div id="ui">
+  <h1>Endless Roads</h1>
+  <p>W/S Drive • A/D Steer • Space Brake</p>
+  <p>F Auto • R Reset</p>
+  <button id="startBtn">START DRIVE</button>
+</div>
 
-  <!-- SPEED HUD -->
-  <div id="hud">SPD 0</div>
+<audio id="engine" loop>
+  <source src="https://cdn.jsdelivr.net/gh/mdn/webaudio-examples/audio-basics/engine.wav" type="audio/wav">
+</audio>
 
-  <!-- Three.js -->
-  <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
-  <script src="main.js"></script>
+<script src="https://unpkg.com/three@0.152.2/build/three.min.js"></script>
+<script src="main.js"></script>
 
 </body>
 </html>
