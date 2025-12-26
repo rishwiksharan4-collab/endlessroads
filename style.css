@@ -2,44 +2,37 @@ html, body {
   margin: 0;
   padding: 0;
   overflow: hidden;
-  font-family: system-ui, sans-serif;
-  background: #000;
+  font-family: Arial, sans-serif;
 }
 
-canvas {
-  display: block;
-  width: 100vw;
-  height: 100vh;
-}
-
-#menu {
+#menu, #settings {
   position: absolute;
-  inset: 0;
-  background: rgba(0,0,0,0.5);
-  color: white;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
+  top: 20px;
+  left: 20px;
+  background: rgba(255,255,255,0.9);
+  padding: 15px;
+  border-radius: 10px;
   z-index: 10;
 }
 
-#menu button {
-  padding: 10px 24px;
-  font-size: 16px;
-  border-radius: 8px;
-  border: none;
-  cursor: pointer;
+#settings {
+  display: none;
+}
+
+button {
+  display: block;
+  margin: 5px 0;
+  padding: 8px;
+  width: 100%;
 }
 
 #hud {
   position: absolute;
-  top: 12px;
-  left: 12px;
+  top: 20px;
+  right: 20px;
   background: rgba(0,0,0,0.6);
   color: white;
-  padding: 6px 10px;
-  border-radius: 6px;
-  font-size: 14px;
-  z-index: 5;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-weight: bold;
 }
