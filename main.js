@@ -1,115 +1,145 @@
-// BASIC SETUP
-const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.set(0, 3, 6);
+let scene,camera,renderer,car,road,terrain,light;
+let speed=0, steer=0, autoDrive=false, started=false;
+const keys={};
 
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(devicePixelRatio);
-document.body.appendChild(renderer.domElement);
+const engine=document.getElementById("engine");
 
-// LIGHT
-const sun = new THREE.DirectionalLight(0xffffff, 1);
-sun.position.set(50, 100, 50);
-scene.add(sun);
-scene.add(new THREE.AmbientLight(0xffffff, 0.3));
-
-// GROUND (FREE ROAM)
-const groundGeo = new THREE.PlaneGeometry(2000, 2000);
-const groundMat = new THREE.MeshStandardMaterial({ color: 0x6dbf4b });
-const ground = new THREE.Mesh(groundGeo, groundMat);
-ground.rotation.x = -Math.PI / 2;
-scene.add(ground);
-
-// ROAD (NO LINES)
-const roadGeo = new THREE.PlaneGeometry(20, 2000);
-const roadMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
-const road = new THREE.Mesh(roadGeo, roadMat);
-road.rotation.x = -Math.PI / 2;
-road.position.y = 0.01;
-scene.add(road);
-
-// CAR
-const car = new THREE.Mesh(
-  new THREE.BoxGeometry(1, 0.6, 2),
-  new THREE.MeshStandardMaterial({ color: 0xff4444 })
-);
-car.position.y = 0.3;
-scene.add(car);
-
-// STATE
-let started = false;
-let speed = 0;
-let autoDrive = false;
-const keys = {};
-
-// UI
-const menu = document.getElementById("menu");
-const startBtn = document.getElementById("startBtn");
-const hud = document.getElementById("hud");
-
-startBtn.onclick = () => {
-  started = true;
-  menu.style.display = "none";
+document.getElementById("startBtn").onclick=()=>{
+  started=true;
+  engine.volume=0.4;
+  engine.play();
 };
 
-// INPUT
-window.addEventListener("keydown", e => {
-  keys[e.key.toLowerCase()] = true;
-  if (e.key.toLowerCase() === "f") autoDrive = !autoDrive;
-});
-window.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
+window.onkeydown=e=>{
+  keys[e.key.toLowerCase()]=true;
+  if(e.key==="f") autoDrive=!autoDrive;
+  if(e.key==="r") resetCar();
+};
 
-// DAY / NIGHT
-let time = 0;
+window.onkeyup=e=>keys[e.key.toLowerCase()]=false;
 
-// LOOP
-function animate() {
+init();
+animate();
+
+function init(){
+  scene=new THREE.Scene();
+  scene.background=new THREE.Color(0x87ceeb);
+
+  camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,0.1,3000);
+
+  renderer=new THREE.WebGLRenderer({antialias:true});
+  renderer.setSize(innerWidth,innerHeight);
+  document.body.appendChild(renderer.domElement);
+
+  light=new THREE.DirectionalLight(0xffffff,1);
+  light.position.set(50,100,50);
+  scene.add(light);
+  scene.add(new THREE.AmbientLight(0xffffff,0.4));
+
+  terrain=createTerrain();
+  scene.add(terrain);
+
+  road=createRoad();
+  scene.add(road);
+
+  car=createCar();
+  scene.add(car);
+
+  resetCar();
+
+  window.onresize=()=>{
+    camera.aspect=innerWidth/innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth,innerHeight);
+  };
+}
+
+function createCar(){
+  const g=new THREE.BoxGeometry(1,0.6,2);
+  const m=new THREE.MeshStandardMaterial({color:0xff3333});
+  const c=new THREE.Mesh(g,m);
+
+  const head=new THREE.SpotLight(0xffffff,1,20,0.6);
+  head.position.set(0,0.5,1.2);
+  c.add(head);
+
+  return c;
+}
+
+function createRoad(){
+  const g=new THREE.PlaneGeometry(50,3000);
+  g.rotateX(-Math.PI/2);
+  const m=new THREE.MeshStandardMaterial({color:0x333333});
+  return new THREE.Mesh(g,m);
+}
+
+function createTerrain(){
+  const g=new THREE.PlaneGeometry(3000,3000,120,120);
+  g.rotateX(-Math.PI/2);
+  const p=g.attributes.position;
+
+  for(let i=0;i<p.count;i++){
+    const x=p.getX(i),z=p.getZ(i);
+    const h=
+      Math.sin(x*0.004)*6+
+      Math.cos(z*0.004)*6+
+      Math.sin((x+z)*0.002)*14;
+    p.setY(i,h);
+  }
+  g.computeVertexNormals();
+
+  return new THREE.Mesh(
+    g,
+    new THREE.MeshStandardMaterial({color:0x5fbf5f})
+  );
+}
+
+function resetCar(){
+  car.position.set(0,0.4,0);
+  car.rotation.set(0,0,0);
+  speed=0;
+}
+
+let time=0;
+function animate(){
   requestAnimationFrame(animate);
 
-  if (!started) {
-    renderer.render(scene, camera);
-    return;
+  if(started){
+    if(keys["w"]) speed+=0.002;
+    if(keys["s"]) speed-=0.002;
+    if(keys[" "]) speed*=0.9;
+
+    speed*=0.99;
+    speed=Math.max(-0.2,Math.min(0.4,speed));
+
+    if(keys["a"]) steer+=0.03;
+    if(keys["d"]) steer-=0.03;
+    steer*=0.9;
+
+    if(autoDrive){
+      steer+=(-car.rotation.y)*0.02;
+      speed=0.15;
+    }
+
+    car.rotation.y+=steer*speed;
+    car.position.x+=Math.sin(car.rotation.y)*speed*20;
+    car.position.z+=Math.cos(car.rotation.y)*speed*20;
+
+    engine.playbackRate=0.6+Math.abs(speed)*2;
   }
-
-  // CONTROLS
-  if (keys["w"] || autoDrive) speed += 0.02;
-  if (keys["s"]) speed -= 0.03;
-  if (keys[" "]) speed *= 0.9;
-
-  speed *= 0.98;
-  speed = THREE.MathUtils.clamp(speed, -1, 2);
-
-  if (keys["a"]) car.rotation.y += 0.04;
-  if (keys["d"]) car.rotation.y -= 0.04;
-
-  car.translateZ(speed);
 
   camera.position.lerp(
     new THREE.Vector3(
       car.position.x,
-      car.position.y + 3,
-      car.position.z + 6
-    ),
-    0.08
+      car.position.y+5,
+      car.position.z-8
+    ),0.1
   );
   camera.lookAt(car.position);
 
-  // DAY NIGHT CYCLE
-  time += 0.0005;
-  const t = (Math.sin(time) + 1) / 2;
-  scene.background = new THREE.Color().setHSL(0.6, 0.5, 0.3 + t * 0.4);
-  sun.intensity = 0.3 + t;
+  time+=0.0003;
+  light.intensity=0.5+Math.sin(time)*0.5;
+  scene.background.setHSL(0.6,0.5,0.6+Math.sin(time)*0.2);
 
-  hud.textContent = "SPD " + Math.abs(speed * 100).toFixed(0);
-
-  renderer.render(scene, camera);
+  renderer.render(scene,camera);
 }
-
-animate();
-
-window.onresize = () => {
-  camera.aspect = innerWidth / innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth, innerHeight);
-};
