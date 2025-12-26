@@ -3,37 +3,25 @@
 <head>
   <meta charset="UTF-8" />
   <title>Endless Roads — Real 3D</title>
-
-  <!-- Mobile + scaling -->
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-
-  <!-- Styles -->
-  <link rel="stylesheet" href="style.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="style.css" />
 </head>
-
 <body>
-  <!-- GAME CANVAS -->
-  <canvas id="game"></canvas>
 
-  <!-- UI -->
-  <div id="ui">
-    <div id="menu">
-      <h1>Endless Roads</h1>
-      <p>Medium-Realism 3D driving<br>Optimized for low-end devices</p>
-      <button id="startBtn">START DRIVE</button>
-    </div>
-
-    <div id="hud" class="hidden">
-      <div id="speed">SPD 0</div>
-    </div>
+  <!-- START MENU -->
+  <div id="menu">
+    <h1>Endless Roads</h1>
+    <p>Free-Roam 3D Driving<br>Low-End Optimised</p>
+    <button id="startBtn">START DRIVE</button>
+    <small>WASD • Space = Brake • F = Auto</small>
   </div>
 
-  <!-- 🚨 THIS ORDER IS CRITICAL 🚨 -->
+  <!-- SPEED HUD -->
+  <div id="hud">SPD 0</div>
 
-  <!-- THREE.JS (MUST LOAD FIRST) -->
+  <!-- Three.js -->
   <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
-
-  <!-- YOUR GAME CODE -->
   <script src="main.js"></script>
+
 </body>
 </html>
