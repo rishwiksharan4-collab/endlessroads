@@ -1,16 +1,23 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Endless Roads</title>
-  <link rel="stylesheet" href="style.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-<div id="hud">SPD 0</div>
+<div id="ui">
+  <h1>Endless Roads</h1>
+  <button id="startBtn">Start</button>
+  <button id="pauseBtn" disabled>Pause</button>
+  <p>W/A/S/D – Drive | Space – Brake | F – Auto | C – Camera</p>
+</div>
 
-<script src="https://cdn.jsdelivr.net/npm/three@0.152/build/three.min.js"></script>
+<div id="speed">SPD 0</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
 <script src="main.js"></script>
-
 </body>
 </html>
