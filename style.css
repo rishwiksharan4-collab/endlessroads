@@ -1,28 +1,17 @@
 body {
   margin: 0;
   overflow: hidden;
+  background: black;
   font-family: Arial, sans-serif;
 }
 
-#ui {
+#hud {
   position: absolute;
-  top: 20px;
-  left: 20px;
-  z-index: 10;
-}
-
-button {
-  display: block;
-  margin: 8px 0;
-  padding: 10px 20px;
-}
-
-#speed {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  background: #222;
-  color: #fff;
+  top: 15px;
+  right: 15px;
+  background: rgba(0,0,0,0.6);
+  color: white;
   padding: 8px 12px;
   border-radius: 6px;
+  z-index: 10;
 }
