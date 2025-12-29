@@ -1,174 +1,214 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
 <title>Endless Roads</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<meta name="viewport"
+content="width=device-width, initial-scale=1.0, user-scalable=no">
 
 <style>
-body {
+html,body{
   margin:0;
+  padding:0;
   overflow:hidden;
-  font-family:Arial, sans-serif;
+  background:#000;
+  touch-action:none;
+  font-family:sans-serif;
 }
 
-/* UI */
-#ui {
+#menu{
   position:fixed;
-  top:20px;
-  left:20px;
-  background:#ffffffdd;
-  padding:12px;
-  border-radius:10px;
-}
-button {
-  width:100%;
-  margin-top:6px;
-  padding:6px;
+  inset:0;
+  background:#87ceeb;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:20;
 }
 
-/* Mobile Controls */
-#mobileControls {
+#menuBox{
+  background:#fff;
+  padding:20px;
+  border-radius:12px;
+  text-align:center;
+}
+
+#hud{
   position:fixed;
-  bottom:20px;
+  top:10px;
+  left:10px;
+  color:#fff;
+  z-index:10;
+}
+
+#mobile{
+  position:fixed;
+  bottom:10px;
   left:0;
   right:0;
   display:none;
   justify-content:space-between;
   padding:0 20px;
+  z-index:10;
 }
-.mBtn {
+
+.mbtn{
   width:70px;
   height:70px;
   border-radius:50%;
-  border:none;
-  background:rgba(0,0,0,0.6);
-  color:white;
+  background:#000a;
+  color:#fff;
   font-size:26px;
+  border:none;
 }
 </style>
 </head>
 
 <body>
 
-<div id="ui">
-  <b>Endless Roads</b><br>
-  <button id="startBtn">Start</button>
-  <div style="font-size:12px;margin-top:6px">
-    W A S D | Space
+<div id="menu">
+  <div id="menuBox">
+    <h2>Endless Roads</h2>
+    <button id="begin">BEGIN</button>
   </div>
 </div>
 
-<div id="mobileControls">
+<div id="hud">SPD <span id="spd">0</span></div>
+
+<div id="mobile">
   <div>
-    <button class="mBtn" id="leftBtn">◀</button>
-    <button class="mBtn" id="rightBtn">▶</button>
+    <button class="mbtn" id="left">◀</button>
+    <button class="mbtn" id="right">▶</button>
   </div>
   <div>
-    <button class="mBtn" id="brakeBtn">⛔</button>
-    <button class="mBtn" id="gasBtn">▲</button>
+    <button class="mbtn" id="brake">⛔</button>
+    <button class="mbtn" id="gas">▲</button>
   </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
 
 <script>
-/* ---------- DEVICE DETECT ---------- */
-const isMobile = ('ontouchstart' in window);
-if(isMobile){
-  document.getElementById("mobileControls").style.display="flex";
-}
+/* DEVICE DETECT */
+const isMobile=/Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
+if(isMobile) document.getElementById("mobile").style.display="flex";
 
-/* ---------- SCENE ---------- */
-let scene = new THREE.Scene();
-scene.background = new THREE.Color(0x87ceeb);
+/* SCENE */
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x87ceeb);
 
-let camera = new THREE.PerspectiveCamera(70, innerWidth/innerHeight, 0.1, 1000);
-camera.position.set(0,4,8);
-
-let renderer = new THREE.WebGLRenderer({antialias:!isMobile});
-renderer.setSize(innerWidth, innerHeight);
+const camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,0.1,1000);
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth,innerHeight);
 document.body.appendChild(renderer.domElement);
 
-/* ---------- LIGHT ---------- */
-scene.add(new THREE.HemisphereLight(0xffffff,0x444444,1));
+/* LIGHT */
+scene.add(new THREE.HemisphereLight(0xffffff,0x444444,1.2));
 
-/* ---------- GROUND ---------- */
-let ground = new THREE.Mesh(
-  new THREE.PlaneGeometry(500,500),
-  new THREE.MeshStandardMaterial({color:0x66dd66})
+/* TERRAIN */
+const land=new THREE.Mesh(
+  new THREE.PlaneGeometry(2000,2000),
+  new THREE.MeshStandardMaterial({color:0x55cc55})
 );
-ground.rotation.x = -Math.PI/2;
-scene.add(ground);
+land.rotation.x=-Math.PI/2;
+scene.add(land);
 
-/* ---------- ROAD ---------- */
-let road = new THREE.Mesh(
-  new THREE.PlaneGeometry(20,500),
-  new THREE.MeshStandardMaterial({color:0x333333})
-);
-road.rotation.x = -Math.PI/2;
-road.position.y = 0.01;
-scene.add(road);
+/* ROAD GROUP */
+const roadGroup=new THREE.Group();
+scene.add(roadGroup);
 
-/* ---------- CAR ---------- */
-let car = new THREE.Mesh(
-  new THREE.BoxGeometry(1.5,0.6,3),
+/* CURVED ROAD SEGMENTS */
+const SEG=40;
+for(let i=0;i<SEG;i++){
+  const road=new THREE.Mesh(
+    new THREE.PlaneGeometry(12,40),
+    new THREE.MeshStandardMaterial({color:0x333333})
+  );
+  road.rotation.x=-Math.PI/2;
+  road.position.z=-i*40;
+  road.position.x=Math.sin(i*0.3)*6;
+  roadGroup.add(road);
+
+  /* GUARD RAILS */
+  if(i%5!==0){
+    ["L","R"].forEach(side=>{
+      const rail=new THREE.Mesh(
+        new THREE.BoxGeometry(0.5,1,40),
+        new THREE.MeshStandardMaterial({color:0xaaaaaa})
+      );
+      rail.position.z=road.position.z;
+      rail.position.x=road.position.x+(side==="L"?-6.5:6.5);
+      rail.position.y=0.5;
+      roadGroup.add(rail);
+    });
+  }
+}
+
+/* CAR */
+const car=new THREE.Mesh(
+  new THREE.BoxGeometry(1.6,0.6,3.2),
   new THREE.MeshStandardMaterial({color:0xffffff})
 );
-car.position.y = 0.3;
+car.position.y=0.35;
 scene.add(car);
 
-/* ---------- INPUT ---------- */
-let keys = {};
+/* INPUT */
+let gas=false, brake=false, left=false, right=false;
+let keys={};
+
 addEventListener("keydown",e=>keys[e.key.toLowerCase()]=true);
 addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
 
-let mLeft=false,mRight=false,mGas=false,mBrake=false;
-function bind(id,cb){
-  let b=document.getElementById(id);
-  b.addEventListener("touchstart",e=>{e.preventDefault();cb(true)});
-  b.addEventListener("touchend",e=>{e.preventDefault();cb(false)});
+function bind(id,fn){
+  const el=document.getElementById(id);
+  el.addEventListener("pointerdown",e=>{e.preventDefault();fn(true);});
+  el.addEventListener("pointerup",()=>fn(false));
 }
-bind("leftBtn",v=>mLeft=v);
-bind("rightBtn",v=>mRight=v);
-bind("gasBtn",v=>mGas=v);
-bind("brakeBtn",v=>mBrake=v);
 
-/* ---------- GAME ---------- */
-let speed=0;
-let started=false;
+if(isMobile){
+  bind("gas",v=>gas=v);
+  bind("brake",v=>brake=v);
+  bind("left",v=>left=v);
+  bind("right",v=>right=v);
+}
 
-document.getElementById("startBtn").onclick=()=>{
+/* GAME */
+let speed=0, started=false;
+
+document.getElementById("begin").onclick=()=>{
+  document.getElementById("menu").style.display="none";
   started=true;
 };
 
-function animate(){
-  requestAnimationFrame(animate);
+function loop(){
+  requestAnimationFrame(loop);
 
   if(started){
-    if(keys["w"]||mGas) speed+=0.002;
-    if(keys["s"]) speed-=0.002;
-    if(keys[" "]||mBrake) speed*=0.9;
-    speed*=0.98;
-    speed=Math.max(Math.min(speed,0.3),-0.1);
+    if(keys["w"]||gas) speed+=0.003;
+    if(keys["s"]) speed-=0.003;
+    if(keys[" "]||brake) speed*=0.85;
 
-    if(keys["a"]||mLeft) car.position.x-=0.1;
-    if(keys["d"]||mRight) car.position.x+=0.1;
+    speed*=0.98;
+    speed=Math.max(Math.min(speed,0.35),-0.25);
+
+    if(keys["a"]||left) car.position.x-=0.15;
+    if(keys["d"]||right) car.position.x+=0.15;
 
     car.position.z-=speed*10;
 
-    // stay on road area
-    car.position.x=Math.max(Math.min(car.position.x,8),-8);
-
     camera.position.lerp(
-      new THREE.Vector3(car.position.x,4,car.position.z+8),0.1
+      new THREE.Vector3(car.position.x,4,car.position.z+8),0.12
     );
     camera.lookAt(car.position);
+
+    document.getElementById("spd").textContent=Math.abs(speed*100|0);
   }
 
   renderer.render(scene,camera);
 }
-animate();
+
+loop();
 
 addEventListener("resize",()=>{
   camera.aspect=innerWidth/innerHeight;
