@@ -1,200 +1,181 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
+<meta charset="UTF-8">
 <title>Endless Roads</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <style>
-  body { margin:0; overflow:hidden; background:#000; }
-  #ui {
-    position:absolute; top:20px; left:20px;
-    background:rgba(255,255,255,0.9);
-    padding:14px; border-radius:10px;
-    font-family:Arial;
-  }
-  button { width:120px; margin:4px 0; }
-  #spd {
-    position:absolute; top:20px; right:20px;
-    background:#333; color:#fff;
-    padding:8px 12px; border-radius:8px;
-    font-family:monospace;
-  }
+body {
+  margin:0;
+  overflow:hidden;
+  font-family:Arial, sans-serif;
+}
+
+/* UI */
+#ui {
+  position:fixed;
+  top:20px;
+  left:20px;
+  background:#ffffffdd;
+  padding:12px;
+  border-radius:10px;
+}
+button {
+  width:100%;
+  margin-top:6px;
+  padding:6px;
+}
+
+/* Mobile Controls */
+#mobileControls {
+  position:fixed;
+  bottom:20px;
+  left:0;
+  right:0;
+  display:none;
+  justify-content:space-between;
+  padding:0 20px;
+}
+.mBtn {
+  width:70px;
+  height:70px;
+  border-radius:50%;
+  border:none;
+  background:rgba(0,0,0,0.6);
+  color:white;
+  font-size:26px;
+}
 </style>
 </head>
+
 <body>
 
 <div id="ui">
-  <b>Endless Roads</b><br><br>
-  <button id="start">Start</button>
-  <button id="pause">Pause</button><br><br>
-  W/A/S/D – Drive<br>
-  Space – Brake<br>
-  C – Camera
+  <b>Endless Roads</b><br>
+  <button id="startBtn">Start</button>
+  <div style="font-size:12px;margin-top:6px">
+    W A S D | Space
+  </div>
 </div>
 
-<div id="spd">SPD 0</div>
+<div id="mobileControls">
+  <div>
+    <button class="mBtn" id="leftBtn">◀</button>
+    <button class="mBtn" id="rightBtn">▶</button>
+  </div>
+  <div>
+    <button class="mBtn" id="brakeBtn">⛔</button>
+    <button class="mBtn" id="gasBtn">▲</button>
+  </div>
+</div>
 
-<script src="https://cdn.jsdelivr.net/npm/three@0.152/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
 
 <script>
-// ===== BASIC SETUP =====
-const scene = new THREE.Scene();
+/* ---------- DEVICE DETECT ---------- */
+const isMobile = ('ontouchstart' in window);
+if(isMobile){
+  document.getElementById("mobileControls").style.display="flex";
+}
+
+/* ---------- SCENE ---------- */
+let scene = new THREE.Scene();
 scene.background = new THREE.Color(0x87ceeb);
 
-const camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 1000);
+let camera = new THREE.PerspectiveCamera(70, innerWidth/innerHeight, 0.1, 1000);
 camera.position.set(0,4,8);
 
-const renderer = new THREE.WebGLRenderer({antialias:true});
+let renderer = new THREE.WebGLRenderer({antialias:!isMobile});
 renderer.setSize(innerWidth, innerHeight);
 document.body.appendChild(renderer.domElement);
 
-window.onresize = () => {
-  camera.aspect = innerWidth/innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth, innerHeight);
-};
-
-// ===== LIGHT =====
+/* ---------- LIGHT ---------- */
 scene.add(new THREE.HemisphereLight(0xffffff,0x444444,1));
-const sun = new THREE.DirectionalLight(0xffffff,0.8);
-sun.position.set(10,20,0);
-scene.add(sun);
 
-// ===== TERRAIN =====
-const ground = new THREE.Mesh(
-  new THREE.PlaneGeometry(2000,2000),
-  new THREE.MeshLambertMaterial({color:0x6fdc6f})
+/* ---------- GROUND ---------- */
+let ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(500,500),
+  new THREE.MeshStandardMaterial({color:0x66dd66})
 );
 ground.rotation.x = -Math.PI/2;
 scene.add(ground);
 
-// ===== ROAD =====
-const roadGroup = [];
-const TILE = 20;
-const roadMat = new THREE.MeshStandardMaterial({color:0x222222});
+/* ---------- ROAD ---------- */
+let road = new THREE.Mesh(
+  new THREE.PlaneGeometry(20,500),
+  new THREE.MeshStandardMaterial({color:0x333333})
+);
+road.rotation.x = -Math.PI/2;
+road.position.y = 0.01;
+scene.add(road);
 
-function roadCurve(z){
-  return Math.sin(z*0.01)*6;
-}
-
-for(let i=0;i<40;i++){
-  const r = new THREE.Mesh(
-    new THREE.PlaneGeometry(6,TILE),
-    roadMat
-  );
-  r.rotation.x = -Math.PI/2;
-  r.position.z = -i*TILE;
-  scene.add(r);
-  roadGroup.push(r);
-}
-
-// ===== CAR =====
-const car = new THREE.Group();
-
-// body
-const body = new THREE.Mesh(
-  new THREE.BoxGeometry(1.8,0.6,3.5),
+/* ---------- CAR ---------- */
+let car = new THREE.Mesh(
+  new THREE.BoxGeometry(1.5,0.6,3),
   new THREE.MeshStandardMaterial({color:0xffffff})
 );
-body.position.y = 0.6;
-car.add(body);
-
-// wheels
-function wheel(x,z){
-  const w = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.35,0.35,0.4,16),
-    new THREE.MeshStandardMaterial({color:0x111111})
-  );
-  w.rotation.z = Math.PI/2;
-  w.position.set(x,0.35,z);
-  car.add(w);
-}
-wheel(-0.9,1.2); wheel(0.9,1.2);
-wheel(-0.9,-1.2); wheel(0.9,-1.2);
-
+car.position.y = 0.3;
 scene.add(car);
 
-// ===== AUDIO =====
-const sndIdle = new Audio("engine_idle.mp3");
-const sndLow  = new Audio("engine_low.mp3");
-const sndHigh = new Audio("engine_high.mp3");
+/* ---------- INPUT ---------- */
+let keys = {};
+addEventListener("keydown",e=>keys[e.key.toLowerCase()]=true);
+addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
 
-[sndIdle,sndLow,sndHigh].forEach(s=>{
-  s.loop = true;
-  s.volume = 0;
-});
+let mLeft=false,mRight=false,mGas=false,mBrake=false;
+function bind(id,cb){
+  let b=document.getElementById(id);
+  b.addEventListener("touchstart",e=>{e.preventDefault();cb(true)});
+  b.addEventListener("touchend",e=>{e.preventDefault();cb(false)});
+}
+bind("leftBtn",v=>mLeft=v);
+bind("rightBtn",v=>mRight=v);
+bind("gasBtn",v=>mGas=v);
+bind("brakeBtn",v=>mBrake=v);
 
-// ===== INPUT =====
-const keys = {};
-onkeydown = e => keys[e.key.toLowerCase()] = true;
-onkeyup   = e => keys[e.key.toLowerCase()] = false;
+/* ---------- GAME ---------- */
+let speed=0;
+let started=false;
 
-// ===== GAME STATE =====
-let speed = 0;
-let running = false;
-let paused = false;
-let camMode = 0;
-
-// ===== UI =====
-start.onclick = () => {
-  running = true;
-  sndIdle.play(); sndLow.play(); sndHigh.play();
+document.getElementById("startBtn").onclick=()=>{
+  started=true;
 };
-pause.onclick = () => paused = !paused;
 
-// ===== LOOP =====
 function animate(){
   requestAnimationFrame(animate);
-  if(!running || paused) return renderer.render(scene,camera);
 
-  // speed
-  if(keys["w"]) speed += 0.002;
-  if(keys["s"]) speed -= 0.002;
-  if(keys[" "]) speed *= 0.95;
-  speed = THREE.MathUtils.clamp(speed,0,0.25);
+  if(started){
+    if(keys["w"]||mGas) speed+=0.002;
+    if(keys["s"]) speed-=0.002;
+    if(keys[" "]||mBrake) speed*=0.9;
+    speed*=0.98;
+    speed=Math.max(Math.min(speed,0.3),-0.1);
 
-  // steering (FIXED)
-  if(keys["a"]) car.position.x += 0.12;
-  if(keys["d"]) car.position.x -= 0.12;
+    if(keys["a"]||mLeft) car.position.x-=0.1;
+    if(keys["d"]||mRight) car.position.x+=0.1;
 
-  car.position.z -= speed;
+    car.position.z-=speed*10;
 
-  // road snapping
-  const tx = roadCurve(car.position.z);
-  car.position.x += (tx - car.position.x)*0.02;
+    // stay on road area
+    car.position.x=Math.max(Math.min(car.position.x,8),-8);
 
-  // road loop
-  roadGroup.forEach(r=>{
-    const c1 = roadCurve(r.position.z);
-    const c2 = roadCurve(r.position.z+5);
-    r.position.x = c1;
-    r.rotation.z = Math.atan2(c2-c1,5);
-    if(r.position.z - car.position.z > TILE*2)
-      r.position.z -= TILE*roadGroup.length;
-  });
-
-  // camera
-  if(keys["c"]) camMode = (camMode+1)%2;
-  if(camMode===0){
-    camera.position.lerp(new THREE.Vector3(
-      car.position.x,4,car.position.z+8
-    ),0.1);
-  }else{
-    camera.position.lerp(new THREE.Vector3(
-      car.position.x,1.5,car.position.z+0.5
-    ),0.1);
+    camera.position.lerp(
+      new THREE.Vector3(car.position.x,4,car.position.z+8),0.1
+    );
+    camera.lookAt(car.position);
   }
-  camera.lookAt(car.position);
-
-  // ===== ENGINE SOUND MIX =====
-  sndIdle.volume = speed < 0.02 ? 0.6 : 0;
-  sndLow.volume  = speed>=0.02 && speed<0.12 ? 0.6 : 0;
-  sndHigh.volume = speed>=0.12 ? 0.7 : 0;
-
-  document.getElementById("spd").innerText = "SPD " + Math.floor(speed*400);
 
   renderer.render(scene,camera);
 }
 animate();
+
+addEventListener("resize",()=>{
+  camera.aspect=innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);
+});
 </script>
+
 </body>
 </html>
