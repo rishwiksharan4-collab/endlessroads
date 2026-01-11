@@ -1,100 +1,95 @@
-let scene,camera,renderer,car,terrain=[],speed=0,dir=0;
-const chunkSize=200, chunks=6, roadWidth=20;
-let started=false;
+let scene, camera, renderer;
+let car;
+let speed = 0;
+let forward = false;
+let turnLeft = false;
+let turnRight = false;
+let started = false;
 
-function startGame(){
-  document.getElementById("menu").style.display="none";
-  init();
+// MOBILE
+let isMobile = /Android|iPhone/i.test(navigator.userAgent);
+
+function init() {
+    scene = new THREE.Scene();
+
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 3, 8);
+
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    // Terrain
+    let groundGeo = new THREE.PlaneGeometry(200, 200, 50, 50);
+    groundGeo.rotateX(-Math.PI / 2);
+
+    let groundMat = new THREE.MeshLambertMaterial({ color: 0x7CFC00 });
+    let ground = new THREE.Mesh(groundGeo, groundMat);
+    scene.add(ground);
+
+    // Car
+    let carGeo = new THREE.BoxGeometry(1, 0.5, 2);
+    let carMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
+    car = new THREE.Mesh(carGeo, carMat);
+    car.position.y = 0.3;
+    scene.add(car);
+
+    // Lighting
+    let light = new THREE.DirectionalLight(0xffffff, 1);
+    light.position.set(5, 10, 5);
+    scene.add(light);
+
+    animate();
 }
 
-function init(){
-  scene=new THREE.Scene();
-  camera=new THREE.PerspectiveCamera(75,innerWidth/innerHeight,0.1,1000);
-  renderer=new THREE.WebGLRenderer({antialias:true});
-  renderer.setSize(innerWidth,innerHeight);
-  document.body.appendChild(renderer.domElement);
+function animate() {
+    requestAnimationFrame(animate);
 
-  // CAR
-  let geo=new THREE.BoxGeometry(4,2,8);
-  let mat=new THREE.MeshStandardMaterial({color:"white"});
-  car=new THREE.Mesh(geo,mat);
-  car.position.y=1;
-  scene.add(car);
+    if (started) {
+        if (forward) speed += 0.002;
+        else speed *= 0.98;
 
-  // LIGHT
-  let light=new THREE.DirectionalLight(0xffffff,1);
-  light.position.set(0,50,50);
-  scene.add(light);
+        if (turnLeft) car.rotation.y += 0.04;
+        if (turnRight) car.rotation.y -= 0.04;
 
-  spawnTerrain();
-  animate();
-  setupControls();
-}
+        car.position.x -= Math.sin(car.rotation.y) * speed;
+        car.position.z -= Math.cos(car.rotation.y) * speed;
 
-function spawnTerrain(){
-  for(let i=0;i<chunks;i++){
-    let mesh=makeChunk(i*chunkSize);
-    terrain.push(mesh);
-    scene.add(mesh);
-  }
-}
-
-function makeChunk(zOffset){
-  let geo=new THREE.PlaneGeometry(chunkSize,chunkSize,40,40);
-  geo.rotateX(-Math.PI/2);
-
-  for(let i=0;i<geo.attributes.position.count;i++){
-    let v=new THREE.Vector3().fromBufferAttribute(geo.attributes.position,i);
-    let h=perlin.noise(v.x*0.02,0,v.z*0.02)*5;
-    v.y=h;
-    geo.attributes.position.setXYZ(i,v.x,v.y,v.z);
-  }
-
-  geo.computeVertexNormals();
-  let mat=new THREE.MeshStandardMaterial({color:"#8ff28f"});
-  let mesh=new THREE.Mesh(geo,mat);
-  mesh.position.z=-zOffset;
-  return mesh;
-}
-
-function recycleChunks(){
-  for(let c of terrain){
-    if(car.position.z - c.position.z < -chunkSize){
-      c.position.z -= chunks*chunkSize;
+        camera.position.lerp(
+            new THREE.Vector3(car.position.x, car.position.y + 3, car.position.z + 8),
+            0.05
+        );
+        camera.lookAt(car.position);
     }
-  }
+
+    renderer.render(scene, camera);
 }
 
-function setupControls(){
-  let isMobile = /Android|iPhone/i.test(navigator.userAgent);
-  if(isMobile){
-    let t=document.getElementById("touchControls");
-    t.style.display="flex";
-    document.getElementById("btnL").ontouchstart=()=>dir=0.03;
-    document.getElementById("btnL").ontouchend=()=>dir=0;
-    document.getElementById("btnR").ontouchstart=()=>dir=-0.03;
-    document.getElementById("btnR").ontouchend=()=>dir=0;
-  } else {
-    onkeydown=e=>{
-      if(e.key==="a")dir=0.03;
-      if(e.key==="d")dir=-0.03;
-      if(e.key==="w")speed=0.4;
-    }
-    onkeyup=e=>{
-      if(e.key==="a"||e.key==="d")dir=0;
-      if(e.key==="w")speed=0;
-    }
-  }
+document.getElementById("startBtn").onclick = () => {
+    document.getElementById("ui").style.display = "none";
+    started = true;
+};
+
+// PC Controls
+window.onkeydown = (e) => {
+    if (e.key === "w") forward = true;
+    if (e.key === "a") turnLeft = true;
+    if (e.key === "d") turnRight = true;
+};
+
+window.onkeyup = (e) => {
+    if (e.key === "w") forward = false;
+    if (e.key === "a") turnLeft = false;
+    if (e.key === "d") turnRight = false;
+};
+
+// Mobile Controls
+if (isMobile) {
+    document.getElementById("mobileControls").style.display = "flex";
+
+    btnLeft.onclick = () => { turnLeft = true; setTimeout(()=>turnLeft=false,150); }
+    btnRight.onclick = () => { turnRight = true; setTimeout(()=>turnRight=false,150); }
+    btnBrake.onclick = () => { speed *= 0.5; }
 }
 
-function animate(){
-  requestAnimationFrame(animate);
-  car.position.z -= 0.5 + speed;
-  car.position.x += dir * car.position.z * 0.0 + dir*10;
-
-  camera.position.set(car.position.x,10,car.position.z+15);
-  camera.lookAt(car.position);
-
-  recycleChunks();
-  renderer.render(scene,camera);
-}
+init();
