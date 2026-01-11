@@ -1,177 +1,140 @@
-// BASIC SETUP
 let scene, camera, renderer;
-let car, roadGroup = [], terrain = [];
-let started = false, paused = false, autoDrive = false;
-let speed = 0;
-let cameraMode = 0;
+let car, speed = 0, turn = 0;
+let chunks = [];
+let isMobile = false;
+let playing = false;
 
-const keys = {};
-const ROAD_WIDTH = 10;
-const TILE = 100;
+const CHUNK_SIZE = 200;
+const ROAD_WIDTH = 40;
+const CAR_SPEED = 0.4;
 
-// UI
-const startBtn = document.getElementById("startBtn");
-const pauseBtn = document.getElementById("pauseBtn");
-const speedUI = document.getElementById("speed");
+window.onload = () => init();
 
-// SCENE
-scene = new THREE.Scene();
-scene.fog = new THREE.Fog(0xaaccee, 20, 300);
+function init() {
+    detectDevice();
+    setupScene();
+    setupCar();
+    createChunk(0);
+    createChunk(1);
 
-// CAMERA
-camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.set(0, 6, -12);
-
-// RENDERER
-renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setClearColor(0xaaccee);
-document.body.appendChild(renderer.domElement);
-
-// LIGHTS
-scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1));
-const sun = new THREE.DirectionalLight(0xffffff, 0.8);
-sun.position.set(10, 20, -10);
-scene.add(sun);
-
-// CAR (CLEAR FRONT/BACK)
-function createCar() {
-  const group = new THREE.Group();
-
-  const body = new THREE.Mesh(
-    new THREE.BoxGeometry(1.6, 0.5, 3),
-    new THREE.MeshStandardMaterial({ color: 0xffffff })
-  );
-  body.position.y = 0.4;
-  group.add(body);
-
-  const hood = new THREE.Mesh(
-    new THREE.BoxGeometry(1.4, 0.4, 1.2),
-    new THREE.MeshStandardMaterial({ color: 0xdddddd })
-  );
-  hood.position.set(0, 0.55, 0.9);
-  group.add(hood);
-
-  const front = new THREE.Mesh(
-    new THREE.BoxGeometry(1.2, 0.2, 0.2),
-    new THREE.MeshStandardMaterial({ color: 0x222222 })
-  );
-  front.position.set(0, 0.3, 1.6);
-  group.add(front);
-
-  group.position.y = 0.3;
-  return group;
+    document.getElementById("beginBtn").onclick = startGame;
+    
+    animate();
 }
 
-car = createCar();
-scene.add(car);
-
-// ROAD (CURVED)
-function roadX(z) {
-  return Math.sin(z * 0.01) * 6;
+function detectDevice() {
+    isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
+    if (isMobile) {
+        document.getElementById("mobileControls").style.display = "flex";
+        setupMobileControls();
+    }
 }
 
-function createRoad(z) {
-  const geo = new THREE.PlaneGeometry(ROAD_WIDTH, TILE);
-  const mat = new THREE.MeshStandardMaterial({ color: 0x333333 });
-  const mesh = new THREE.Mesh(geo, mat);
-  mesh.rotation.x = -Math.PI / 2;
-  mesh.position.z = z;
-  scene.add(mesh);
-  roadGroup.push(mesh);
+function setupScene() {
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(70, innerWidth/innerHeight, 0.1, 1000);
+    renderer = new THREE.WebGLRenderer({ antialias:true });
+    renderer.setSize(innerWidth, innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    const light = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2);
+    scene.add(light);
 }
 
-for (let i = 0; i < 10; i++) createRoad(i * TILE);
-
-// TERRAIN
-function createTerrain(z) {
-  const geo = new THREE.PlaneGeometry(200, TILE);
-  const mat = new THREE.MeshStandardMaterial({ color: 0x66bb66 });
-  const mesh = new THREE.Mesh(geo, mat);
-  mesh.rotation.x = -Math.PI / 2;
-  mesh.position.z = z;
-  scene.add(mesh);
-  terrain.push(mesh);
+function setupCar() {
+    const geometry = new THREE.BoxGeometry(8,4,14);
+    const material = new THREE.MeshStandardMaterial({ color:0xffffff });
+    car = new THREE.Mesh(geometry, material);
+    car.position.set(0,3,0);
+    scene.add(car);
 }
 
-for (let i = 0; i < 10; i++) createTerrain(i * TILE);
+function createChunk(index) {
+    const offset = index * CHUNK_SIZE;
+    
+    // Terrain
+    const tGeo = new THREE.PlaneGeometry(500, CHUNK_SIZE, 50, 50);
+    tGeo.rotation.x = -Math.PI/2;
+    
+    for (let i=0;i<tGeo.vertices?.length;i++){
+        const x = tGeo.vertices[i].x * 0.02;
+        const z = (tGeo.vertices[i].z + offset) * 0.02;
+        tGeo.vertices[i].y = noise.perlin2(x, z) * 6;
+    }
 
-// INPUT
-document.addEventListener("keydown", e => {
-  keys[e.key.toLowerCase()] = true;
-  if (e.key === "f") autoDrive = !autoDrive;
-  if (e.key === "c") cameraMode = (cameraMode + 1) % 3;
-});
+    const tMat = new THREE.MeshStandardMaterial({color:0x7ED957, flatShading:true});
+    const terrain = new THREE.Mesh(tGeo, tMat);
+    terrain.position.z = offset;
+    terrain.receiveShadow = true;
+    scene.add(terrain);
 
-document.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
+    // Road
+    const rGeo = new THREE.PlaneGeometry(ROAD_WIDTH, CHUNK_SIZE);
+    rGeo.rotation.x = -Math.PI/2;
+    const rMat = new THREE.MeshStandardMaterial({color:0x303030});
+    const road = new THREE.Mesh(rGeo, rMat);
+    road.position.set(0,0.1,offset);
+    scene.add(road);
 
-// UI BUTTONS
-startBtn.onclick = () => {
-  started = true;
-  paused = false;
-  pauseBtn.disabled = false;
-};
+    chunks.push({ terrain, road, index });
+}
 
-pauseBtn.onclick = () => paused = !paused;
+function updateChunks() {
+    const first = chunks[0];
+    if (car.position.z > (first.index+1)*CHUNK_SIZE) {
+        first.terrain.position.z += CHUNK_SIZE*2;
+        first.road.position.z += CHUNK_SIZE*2;
+        first.index += 2;
+        chunks.push(chunks.shift());
+    }
+}
 
-// LOOP
+function startGame() {
+    document.getElementById("menu").style.display = "none";
+    playing = true;
+}
+
 function animate() {
-  requestAnimationFrame(animate);
-  if (!started || paused) return renderer.render(scene, camera);
-
-  // SPEED
-  if (keys["w"]) speed += 0.02;
-  if (keys["s"]) speed -= 0.02;
-  if (!keys["w"] && !keys["s"]) speed *= 0.98;
-  speed = Math.max(0, Math.min(speed, 2));
-
-  // STEER
-  if (keys["a"]) car.position.x -= 0.1;
-  if (keys["d"]) car.position.x += 0.1;
-
-  // AUTO DRIVE
-  if (autoDrive) {
-    const tx = roadX(car.position.z);
-    car.position.x += (tx - car.position.x) * 0.05;
-    speed = Math.max(speed, 0.6);
-  }
-
-  // MOVE
-  car.position.z += speed;
-  car.position.y = 0.3;
-
-  // ROAD FOLLOW
-  roadGroup.forEach(r => {
-    r.position.x = roadX(r.position.z);
-    if (r.position.z + TILE < car.position.z)
-      r.position.z += TILE * roadGroup.length;
-  });
-
-  // TERRAIN LOOP
-  terrain.forEach(t => {
-    if (t.position.z + TILE < car.position.z)
-      t.position.z += TILE * terrain.length;
-  });
-
-  // CAMERA MODES
-  if (cameraMode === 0) {
-    camera.position.lerp(new THREE.Vector3(car.position.x, 6, car.position.z - 12), 0.1);
-  } else if (cameraMode === 1) {
-    camera.position.lerp(new THREE.Vector3(car.position.x, 1.2, car.position.z + 1), 0.1);
-  } else {
-    camera.position.lerp(new THREE.Vector3(car.position.x + 10, 12, car.position.z - 10), 0.1);
-  }
-
-  camera.lookAt(car.position);
-  speedUI.innerText = "SPD " + Math.round(speed * 50);
-  renderer.render(scene, camera);
+    requestAnimationFrame(animate);
+    if (playing) update();
+    renderer.render(scene, camera);
 }
 
-animate();
+function update() {
+    if (!isMobile) keyboardControls();
+    moveCar();
+    updateCamera();
+    updateChunks();
+}
 
-// RESIZE
-window.addEventListener("resize", () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-});
+function keyboardControls() {
+    document.onkeydown = (e)=>{
+        if (e.key==='a') turn = -1;
+        if (e.key==='d') turn = 1;
+        if (e.key==='w') speed = CAR_SPEED;
+        if (e.key==='s') speed = -CAR_SPEED;
+    };
+    document.onkeyup = ()=>{ turn=0; speed=0; };
+}
+
+function setupMobileControls() {
+    document.getElementById("btnLeft").ontouchstart = ()=> turn = -1;
+    document.getElementById("btnRight").ontouchstart = ()=> turn = 1;
+    document.getElementById("btnLeft").ontouchend = document.getElementById("btnRight").ontouchend = ()=> turn=0;
+}
+
+function moveCar() {
+    car.position.z += speed;
+    car.position.x += turn;
+}
+
+function updateCamera() {
+    camera.position.set(car.position.x, car.position.y+15, car.position.z-30);
+    camera.lookAt(car.position);
+}
+
+window.onresize = () => {
+    camera.aspect = innerWidth/innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+};
