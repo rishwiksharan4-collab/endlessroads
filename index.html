@@ -43,8 +43,11 @@ button{
   </div>
 </div>
 
+<!-- THREEJS -->
 <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/perlin-noise@1.3.1/index.min.js"></script>
+
+<!-- WORKING PERLIN NOISE CDN -->
+<script src="https://cdn.jsdelivr.net/gh/wwwtyro/perlin.js/perlin.js"></script>
 
 <script>
 /* -------- SCENE -------- */
@@ -60,35 +63,33 @@ renderer.setSize(innerWidth,innerHeight);
 document.body.appendChild(renderer.domElement);
 
 /* -------- LIGHT -------- */
-const hemi=new THREE.HemisphereLight(0xffffff,0x444444,1.2);
-scene.add(hemi);
-
+scene.add(new THREE.HemisphereLight(0xffffff,0x444444,1.2));
 const sun=new THREE.DirectionalLight(0xffffff,1);
 sun.position.set(100,200,100);
 scene.add(sun);
 
 /* -------- TERRAIN CONFIG -------- */
 const TILE_SIZE=100;
-const TILE_SUB=40; // medium poly
-const CHUNK_COUNT=6; // visible tiles
+const TILE_SUB=40;
+const CHUNK_COUNT=6;
 const mountainStrength=30;
 let tiles=[];
 
-/* -------- TERRAIN CREATE -------- */
+/* -------- CREATE TERRAIN -------- */
 function createTile(zIndex){
   const geo=new THREE.PlaneGeometry(TILE_SIZE,TILE_SIZE,TILE_SUB,TILE_SUB);
   geo.rotateX(-Math.PI/2);
 
-  // apply heights
   for(let i=0;i<geo.attributes.position.count;i++){
-    let pos=geo.attributes.position;
-    let x=pos.getX(i);
-    let z=pos.getZ(i);
-    let nx=(x+performance.now()*0.0001)/50;
-    let nz=(z+zIndex*TILE_SIZE)/50;
-    let h=noise.perlin2(nx,nz)*mountainStrength;
+    const pos=geo.attributes.position;
+    const x=pos.getX(i);
+    const z=pos.getZ(i)+zIndex*TILE_SIZE;
+
+    // Perlin noise
+    const h=noise.perlin2(x*0.01,z*0.01)*mountainStrength;
     pos.setY(i,h);
   }
+
   geo.computeVertexNormals();
 
   const mat=new THREE.MeshStandardMaterial({
@@ -102,7 +103,7 @@ function createTile(zIndex){
   return mesh;
 }
 
-/* -------- INIT CHUNKS -------- */
+/* -------- INIT TILES -------- */
 for(let i=0;i<CHUNK_COUNT;i++){
   tiles.push(createTile(i));
 }
@@ -117,12 +118,13 @@ scene.add(car);
 
 /* -------- INPUT -------- */
 let keys={};
-addEventListener("keydown",e=>keys[e.key.toLowerCase()]=true);
-addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
+onkeydown=e=>keys[e.key.toLowerCase()]=true;
+onkeyup=e=>keys[e.key.toLowerCase()]=false;
 
 /* -------- GAME -------- */
 let speed=0;
 let started=false;
+
 document.getElementById("begin").onclick=()=>{
   document.getElementById("menu").style.display="none";
   started=true;
@@ -144,12 +146,12 @@ function loop(){
     );
     camera.lookAt(car.position);
 
-    // recycle chunks
-    tiles.forEach(t=>{
+    // recycle
+    for(const t of tiles){
       if(t.position.z - car.position.z > TILE_SIZE*2){
         t.position.z-=TILE_SIZE*CHUNK_COUNT;
       }
-    });
+    }
   }
 
   renderer.render(scene,camera);
@@ -157,11 +159,11 @@ function loop(){
 
 loop();
 
-addEventListener("resize",()=>{
+onresize=()=>{
   camera.aspect=innerWidth/innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth,innerHeight);
-});
+};
 </script>
 </body>
 </html>
