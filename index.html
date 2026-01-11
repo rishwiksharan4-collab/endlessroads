@@ -1,169 +1,71 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Endless Roads - Wave 1</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Endless Roads</title>
 <style>
-html,body{
-  margin:0;
-  padding:0;
-  overflow:hidden;
-  background:#000;
-  touch-action:none;
-  font-family:sans-serif;
-}
-#menu{
-  position:fixed;
-  inset:0;
-  background:#87ceeb;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  z-index:20;
-}
-#menuBox{
-  background:#fff;
-  padding:20px;
-  border-radius:12px;
-  text-align:center;
-}
-button{
-  padding:10px 20px;
-}
+    html, body {
+        margin:0; padding:0;
+        overflow:hidden;
+        background:#87CEEB;
+        font-family: Arial, sans-serif;
+        touch-action:none;
+    }
+    #menu {
+        position:absolute;
+        top:50%; left:50%;
+        transform:translate(-50%,-50%);
+        background:white;
+        padding:20px 30px;
+        border-radius:10px;
+        text-align:center;
+        font-size:20px;
+        display:block;
+        z-index:10;
+    }
+    #beginBtn {
+        margin-top:15px;
+        padding:10px 20px;
+        font-size:18px;
+    }
+    #mobileControls {
+        position:absolute;
+        bottom:20px;
+        width:100%;
+        display:none;
+        justify-content:center;
+        gap:20px;
+        z-index:10;
+    }
+    .btn {
+        width:60px;
+        height:60px;
+        border-radius:15px;
+        background:#00000050;
+        color:white;
+        font-size:20px;
+        display:flex;
+        justify-content:center;
+        align-items:center;
+        user-select:none;
+    }
 </style>
 </head>
-
 <body>
 
 <div id="menu">
-  <div id="menuBox">
-    <h2>Endless Roads</h2>
-    <button id="begin">BEGIN</button>
-  </div>
+    <b>Endless Roads</b><br><br>
+    <button id="beginBtn">BEGIN</button>
 </div>
 
-<!-- THREEJS -->
+<div id="mobileControls">
+    <div class="btn" id="btnLeft">⟵</div>
+    <div class="btn" id="btnRight">⟶</div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
-
-<!-- WORKING PERLIN NOISE CDN -->
 <script src="https://cdn.jsdelivr.net/gh/wwwtyro/perlin.js/perlin.js"></script>
+<script src="main.js"></script>
 
-<script>
-/* -------- SCENE -------- */
-const scene=new THREE.Scene();
-scene.background=new THREE.Color(0x87ceeb);
-scene.fog=new THREE.FogExp2(0x87ceeb,0.003);
-
-const camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,0.1,2000);
-camera.position.set(0,6,10);
-
-const renderer=new THREE.WebGLRenderer({antialias:true});
-renderer.setSize(innerWidth,innerHeight);
-document.body.appendChild(renderer.domElement);
-
-/* -------- LIGHT -------- */
-scene.add(new THREE.HemisphereLight(0xffffff,0x444444,1.2));
-const sun=new THREE.DirectionalLight(0xffffff,1);
-sun.position.set(100,200,100);
-scene.add(sun);
-
-/* -------- TERRAIN CONFIG -------- */
-const TILE_SIZE=100;
-const TILE_SUB=40;
-const CHUNK_COUNT=6;
-const mountainStrength=30;
-let tiles=[];
-
-/* -------- CREATE TERRAIN -------- */
-function createTile(zIndex){
-  const geo=new THREE.PlaneGeometry(TILE_SIZE,TILE_SIZE,TILE_SUB,TILE_SUB);
-  geo.rotateX(-Math.PI/2);
-
-  for(let i=0;i<geo.attributes.position.count;i++){
-    const pos=geo.attributes.position;
-    const x=pos.getX(i);
-    const z=pos.getZ(i)+zIndex*TILE_SIZE;
-
-    // Perlin noise
-    const h=noise.perlin2(x*0.01,z*0.01)*mountainStrength;
-    pos.setY(i,h);
-  }
-
-  geo.computeVertexNormals();
-
-  const mat=new THREE.MeshStandardMaterial({
-    color:0x77bb66,
-    flatShading:false
-  });
-
-  const mesh=new THREE.Mesh(geo,mat);
-  mesh.position.z=zIndex*TILE_SIZE;
-  scene.add(mesh);
-  return mesh;
-}
-
-/* -------- INIT TILES -------- */
-for(let i=0;i<CHUNK_COUNT;i++){
-  tiles.push(createTile(i));
-}
-
-/* -------- CAR -------- */
-const car=new THREE.Mesh(
-  new THREE.BoxGeometry(1.5,0.6,3),
-  new THREE.MeshStandardMaterial({color:0xffffff})
-);
-car.position.y=5;
-scene.add(car);
-
-/* -------- INPUT -------- */
-let keys={};
-onkeydown=e=>keys[e.key.toLowerCase()]=true;
-onkeyup=e=>keys[e.key.toLowerCase()]=false;
-
-/* -------- GAME -------- */
-let speed=0;
-let started=false;
-
-document.getElementById("begin").onclick=()=>{
-  document.getElementById("menu").style.display="none";
-  started=true;
-};
-
-function loop(){
-  requestAnimationFrame(loop);
-
-  if(started){
-    if(keys["w"]) speed+=0.002;
-    if(keys["s"]) speed-=0.002;
-    speed*=0.98;
-    speed=Math.max(Math.min(speed,1),-0.5);
-
-    car.position.z-=speed*1.2;
-
-    camera.position.lerp(
-      new THREE.Vector3(car.position.x,6,car.position.z+12),0.1
-    );
-    camera.lookAt(car.position);
-
-    // recycle
-    for(const t of tiles){
-      if(t.position.z - car.position.z > TILE_SIZE*2){
-        t.position.z-=TILE_SIZE*CHUNK_COUNT;
-      }
-    }
-  }
-
-  renderer.render(scene,camera);
-}
-
-loop();
-
-onresize=()=>{
-  camera.aspect=innerWidth/innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth,innerHeight);
-};
-</script>
 </body>
 </html>
